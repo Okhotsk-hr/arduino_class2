@@ -6,7 +6,7 @@
 - RFID RC522
 - HC-05
 - (LCD)
-- Android(Processing)
+- Android
 
 ## 手順
 1. バーコード読み取り
@@ -15,7 +15,7 @@
 
 バーコード/QRコードを読み取り、読み取り結果をidとして使用<br>
 idをAndroidへ送信<br>
-~Android~
+**Android**<br>
   受信したidでjsonから商品の値段を検索して画面に表示<br>
   全て読み取ったら決済ボタンを押す<br>
   Arduinoへ信号を送信/決済画面を出す<br>
