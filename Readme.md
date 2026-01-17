@@ -7,6 +7,7 @@
 - HC-05
 - (LCD)
 - Android
+- （フルカラーLED PL9823-F8）
 
 ## 手順
 1. バーコード読み取り
@@ -32,17 +33,20 @@ idをAndroidへ送信<br>
 
 
 ## 端子
-- バーコードリーダー
+- バーコードリーダー<br>
 RX 2<br>
 TX 3
 
-- RC522
+- RC522<br>
 RST          9<br>
 SDA(SS)      10<br>
 MOSI         11<br>
 MISO         12<br>
 SCK          13<br>
 
-- HC-05
+- HC-05<br>
 RX 4<br>
 TX 5
+
+- フルカラーLED（PL9823-F8）<br>
+  
