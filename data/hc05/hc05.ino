@@ -1,27 +1,19 @@
 #include <SoftwareSerial.h>
 
-// HC-05接続ピン
-// HC-05 TXD → Arduino D4
-// HC-05 RXD → Arduino D5
-SoftwareSerial bt(4, 5);  // (RX, TX)
+SoftwareSerial bt(4, 5); // RX, TX
+const int LED = 13;
 
 void setup() {
-  Serial.begin(9600);   // USBシリアル（デバッグ用）
-  bt.begin(9600);       // HC-05（Bluetooth）
-
-  Serial.println("Arduino 起動");
+  pinMode(LED, OUTPUT);
+  Serial.begin(9600);
+  bt.begin(9600);
 }
 
 void loop() {
   if (bt.available()) {
-    String s = bt.readStringUntil('\n');
-    s.trim();
+    char c = bt.read();
 
-    Serial.print("Bluetooth受信: ");
-    Serial.println(s);
-
-    // Bluetoothへ返事
-    bt.print("受信しました: ");
-    bt.println(s);
+    if (c == '1') digitalWrite(LED, HIGH);
+    if (c == '0') digitalWrite(LED, LOW);
   }
 }
