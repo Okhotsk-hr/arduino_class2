@@ -33,7 +33,16 @@ idをAndroidへ送信<br>
 
 ## 端子
 - バーコードリーダー
+RX 2<br>
+TX 3
 
 - RC522
+RST          9<br>
+SDA(SS)      10<br>
+MOSI         11<br>
+MISO         12<br>
+SCK          13<br>
 
 - HC-05
+RX 4<br>
+TX 5
