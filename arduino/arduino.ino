@@ -1,99 +1,89 @@
-#include <SoftwareSerial.h>
 #include <LiquidCrystal.h>
 #include <SPI.h>
 #include <MFRC522.h>
+#include <SoftwareSerial.h>
 
-SoftwareSerial extSerial(2, 3); // RX, TX
-const int speed2d = 115200;     // バーコードリーダーの通信速度
-
-// RS, E, D4, D5, D6, D7
-LiquidCrystal lcd(4, 5, 6, 7, 8, A0); // lcd
-
-// rfid
+// ピン設定
 #define SS_PIN 10
 #define RST_PIN 9
+#define LCD_RS 4
+#define LCD_E 5
+#define LCD_D4 6
+#define LCD_D5 7
+#define LCD_D6 8
+#define LCD_D7 A0
+#define BARCODE_RX 2
+#define BARCODE_TX 3
+#define BARCODE_BAUD 115200
+#define SERIAL_BAUD 9600
 
+// 通信インスタンス
+LiquidCrystal lcd(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
 MFRC522 rfid(SS_PIN, RST_PIN);
+SoftwareSerial extSerial(BARCODE_RX, BARCODE_TX);
 
-// 通信データを保存する文字列変数
-String data2d = "";
-String datarfid = "";
+// データ変数
+String data2d = "";     // バーコードデータ
+String datarfid = "";   // RFID UIDデータ
+
+// 関数プロトタイプ
+void initSystems();
+void readBarcode();
+void readRFID();
+void updateLCD();
 
 void setup()
 {
-    Serial.begin(9600);       // PC表示用
-    extSerial.begin(speed2d); // 外部部品の通信速度
-    delay(1000);              // 初期化待ち
-    Serial.println("start\n");
-
-    lcd.begin(16, 2); // 16x2 LCD
-
-    SPI.begin();
-    rfid.PCD_Init();
-
-    // RFID初期化確認
-    byte version = rfid.PCD_ReadRegister(rfid.VersionReg);
-    Serial.print("MFRC522 Version: 0x");
-    Serial.println(version, HEX);
-
-    if (version == 0x00 || version == 0xFF)
-    {
-        Serial.println("ERROR: RFID module not detected!");
-        lcd.print("RFID Error");
-    }
-    else
-    {
-        Serial.println("RFID module initialized successfully");
-        lcd.print("RFID Ready");
-    }
+    initSystems();
 }
 
 void loop()
 {
+
     if (extSerial.available())
     {
-        // 方法1: 改行文字までの文字列を読み込み
+        // バーコードデータを読み込み
         String msg = extSerial.readStringUntil('\n');
-        data2d = msg; // 文字列変数に保存
-        Serial.println("Received: " + data2d);
+        data2d = msg; // data2d変数に保存
+        Serial.println("Barcode: " + data2d);
+    }
+    // 新しいカードがあるか
+    if (!rfid.PICC_IsNewCardPresent())
+    {
+        return;
     }
 
+    // カードのUIDを読み取る
+    if (!rfid.PICC_ReadCardSerial())
+    {
+        return;
+    }
+
+    // UID表示
+    Serial.print("UID: ");
+    datarfid = ""; // リセット
+    for (byte i = 0; i < rfid.uid.size; i++)
+    {
+        if (rfid.uid.uidByte[i] < 0x10)
+        {
+            Serial.print("0");
+            datarfid += "0";
+        }
+        Serial.print(rfid.uid.uidByte[i], HEX);
+        datarfid += String(rfid.uid.uidByte[i], HEX);
+        Serial.print(" ");
+        datarfid += " ";
+    }
+    Serial.println();
+    Serial.println("Saved UID: " + datarfid);
+
+    // LCD表示
     lcd.setCursor(0, 0);
     lcd.print(data2d);
+    lcd.setCursor(0, 1);
+    lcd.print(datarfid);
 
-    // rfid
-    //  新しいカードがあるか
-    if (rfid.PICC_IsNewCardPresent())
-    {
-        // カードのUIDを読み取る
-        if (rfid.PICC_ReadCardSerial())
-        {
-            // UID表示
-            Serial.print("UID: ");
-            datarfid = ""; // リセット
-            for (byte i = 0; i < rfid.uid.size; i++)
-            {
-                if (rfid.uid.uidByte[i] < 0x10)
-                {
-                    Serial.print("0");
-                    datarfid += "0";
-                }
-                Serial.print(rfid.uid.uidByte[i], HEX);
-                datarfid += String(rfid.uid.uidByte[i], HEX);
-                Serial.print(" ");
-                datarfid += " ";
-            }
-            Serial.println();
-            Serial.println("Saved UID: " + datarfid);
-
-            lcd.setCursor(0, 1);
-            lcd.print(datarfid);
-
-            // 通信終了
-            rfid.PICC_HaltA();
-            rfid.PCD_StopCrypto1();
-        }
-    }
-
-    delay(100); // CPU負荷軽減
+    // 通信終了
+    rfid.PICC_HaltA();
+    rfid.PCD_StopCrypto1();
 }
