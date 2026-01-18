@@ -16,6 +16,8 @@ String datarfid = ""; // RFID UID を保存する変数
 SoftwareSerial extSerial(2, 3); // RX, TX
 String data2d = "";
 String receivedFromPC = ""; // PCから受信したデータ
+String previousPrice = "";  // 前回受信した料金
+int totalPrice = 0;         // 料金の累計
 
 // 関数プロトタイプ
 void read2d();
@@ -42,7 +44,7 @@ void loop()
     readrfid();
     displaylcd();
 
-    Serial.println("fromArduino");
+    // Serial.println("fromArduino");
     receiveFromPC();
 }
 
@@ -54,7 +56,7 @@ void read2d()
         // バーコードデータを読み込み
         String msg = extSerial.readStringUntil('\n');
         data2d = msg; // data2d変数に保存
-        Serial.println("Barcode: " + data2d);
+        Serial.println(data2d);
     }
 }
 
@@ -89,7 +91,7 @@ void readrfid()
         datarfid += " ";
     }
     Serial.println();
-    Serial.println("Saved UID: " + datarfid);
+    Serial.println(datarfid);
 
     // 通信終了
     rfid.PICC_HaltA();
@@ -111,8 +113,8 @@ void displaylcd()
     if (receivedFromPC != "")
     {
         lcd.setCursor(0, 0);
-        lcd.print("PC: ");
-        lcd.setCursor(4, 0);
+        lcd.print("price: ");
+        lcd.setCursor(6, 0);
         lcd.print(receivedFromPC);
     }
     else
@@ -132,5 +134,20 @@ void receiveFromPC()
     {
         receivedFromPC = Serial.readStringUntil('\n');
         Serial.println("Received from PC: " + receivedFromPC);
+
+        // 料金が前回と異なる場合に加算
+        if (receivedFromPC != previousPrice && receivedFromPC != "")
+        {
+            // 文字列を整数に変換して加算
+            int currentPrice = receivedFromPC.toInt();
+            totalPrice += currentPrice;
+
+            previousPrice = receivedFromPC;
+
+            Serial.print("Current Price: ");
+            Serial.print(currentPrice);
+            Serial.print(", Total Price: ");
+            Serial.println(totalPrice);
+        }
     }
 }
