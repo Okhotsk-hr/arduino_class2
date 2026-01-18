@@ -1,6 +1,8 @@
 # 情報処理演習 Ⅱ の授業の制作物
 # ガチなレジのおもちゃ
-
+**ソフトウェリポジトリ**<br>
+https://github.com/Okhotsk-hr/arduino_class2_software
+<br>
 ## 使用部品
 - バーコードリーダー
 - RFID RC522
