@@ -1,87 +1,43 @@
 import processing.serial.*;
 
-Serial bt;
-
-// テキストボックス用
-String inputText = "";
-boolean active = false;  // テキストボックスが選択されているか
+Serial arduino;
+String received = "";
 
 void setup() {
     size(400, 200);
     
+    //利用可能なシリアルポート表示
     println(Serial.list());
     
-    bt = new Serial(this, "COM12", 9600);
-    bt.bufferUntil('\n');
-    
-    println("接続しました");
+    //COM番号は環境に合わせて変更
+    arduino = new Serial(this, "COM14", 9600);
+    arduino.bufferUntil('\n');
 }
 
 void draw() {
     background(240);
+    fill(0);
+    textSize(24);
+    text("Received value:", 20, 60);
+    text(received, 20, 110);
     
-    //テキストボックス描画
+    // ボタン表示
+    fill(0, 100, 255);
+    rect(20, 150, 150, 30);
     fill(255);
-    stroke(active ? color(0, 150, 255) : 0);
-    rect(50, 80, 300, 30);
-    
-    //入力文字表示
-    fill(0);
     textSize(16);
-    text(inputText, 55, 102);
-    
-    //説明
-    fill(0);
-    textSize(12);
-    text("クリックして入力 → Enterで送信（qで終了）", 50, 60);
+    text("送信: 1,000", 40, 172);
 }
 
-/*
-* マウスでテキストボックスを選択
-*/
+// マウスクリック時にArduinoに送信
 void mousePressed() {
-    if (mouseX > 50 && mouseX < 350 && mouseY > 80 && mouseY < 110) {
-        active = true;
-    } else {
-        active = false;
+    if (mouseX > 20 && mouseX < 170 && mouseY > 150 && mouseY < 180) {
+        arduino.write("1000\n");
+        println("送信: 1000");
     }
 }
 
-/*
-* キーボード入力
-*/
-void keyPressed() {
-    if (!active) return;
-    
-    if (key == ENTER || key == RETURN) {
-        if (inputText.equals("q")) {
-            println("終了");
-            bt.stop();
-            exit();
-        }
-        
-        bt.write(inputText + "\n");
-        println("送信:" + inputText);
-        
-        inputText = "";
-    }
-    else if (key == BACKSPACE) {
-        if (inputText.length() > 0) {
-            inputText = inputText.substring(0, inputText.length() - 1);
-        }
-    }
-    else if (key >= 32 && key <= 126) {
-        inputText += key;
-    }
-}
-
-/*
-* Arduino → Processing
-*/
+// Arduino → Processing（受信のみ）
 void serialEvent(Serial p) {
-    String recv = p.readStringUntil('\n');
-    if (recv != null) {
-        recv = trim(recv);
-        println("受信: " + recv);
-    }
+    received = trim(p.readString());
 }
