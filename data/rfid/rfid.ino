@@ -1,4 +1,4 @@
- /* Initial Author: ryand1011 (https://github.com/ryand1011)
+/* Initial Author: ryand1011 (https://github.com/ryand1011)
  *
  * Reads data written by a program such as "rfid_write_personal_data.ino"
  *
@@ -18,7 +18,7 @@
  * SPI SCK     SCK          13 / ICSP-3   52        D13        ICSP-3           15
  *
  * More pin layouts for other boards can be found here: https://github.com/miguelbalboa/rfid#pin-layout
-*/
+ */
 
 #include <SPI.h>
 #include <MFRC522.h>
@@ -27,35 +27,47 @@
 #define RST_PIN 9
 
 MFRC522 rfid(SS_PIN, RST_PIN);
+String datarfid = ""; // RFID UID を保存する変数
 
-void setup() {
+void setup()
+{
   Serial.begin(9600);
   SPI.begin();
   rfid.PCD_Init();
   Serial.println("Place your RFID card");
 }
 
-void loop() {
+void loop()
+{
   // 新しいカードがあるか
-  if (!rfid.PICC_IsNewCardPresent()) {
+  if (!rfid.PICC_IsNewCardPresent())
+  {
     return;
   }
 
   // カードのUIDを読み取る
-  if (!rfid.PICC_ReadCardSerial()) {
+  if (!rfid.PICC_ReadCardSerial())
+  {
     return;
   }
 
   // UID表示
   Serial.print("UID: ");
-  for (byte i = 0; i < rfid.uid.size; i++) {
-    if (rfid.uid.uidByte[i] < 0x10) {
+  datarfid = ""; // リセット
+  for (byte i = 0; i < rfid.uid.size; i++)
+  {
+    if (rfid.uid.uidByte[i] < 0x10)
+    {
       Serial.print("0");
+      datarfid += "0";
     }
     Serial.print(rfid.uid.uidByte[i], HEX);
+    datarfid += String(rfid.uid.uidByte[i], HEX);
     Serial.print(" ");
+    datarfid += " ";
   }
   Serial.println();
+  Serial.println("Saved UID: " + datarfid);
 
   // 通信終了
   rfid.PICC_HaltA();
