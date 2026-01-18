@@ -1,8 +1,6 @@
 # 情報処理演習 Ⅱ の授業の制作物
 # ガチなレジのおもちゃ
-**ソフトウェリポジトリ**<br>
-https://github.com/Okhotsk-hr/arduino_class2_software
-<br>
+
 ## 使用部品
 - バーコードリーダー
 - RFID RC522
@@ -13,11 +11,11 @@ https://github.com/Okhotsk-hr/arduino_class2_software
 
 ## 手順
 1. バーコード読み取り
-2. 値段集計
-3. タッチ決済
+2. PC(Processing)に送信
+3. price.csvから受け取ったバーコードに対応する値段を検索
+4. 検索結果と合計金額をArduinoに送信
+5. ボタンを押して支払いに進む
 
-バーコード/RFID読み取り設定<br>
-PCとのシリアル通信<br>
 
 
 ## 端子
@@ -32,9 +30,8 @@ MOSI         11<br>
 MISO         12<br>
 SCK          13<br>
 
-- ~~HC-05<br>~~
-RX 4<br>
-TX 5
+- LCD<br>
+
 
 - フルカラーLED（PL9823-F8）<br>
 
