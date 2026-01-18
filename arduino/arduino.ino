@@ -3,43 +3,47 @@
 #include <MFRC522.h>
 #include <SoftwareSerial.h>
 
-// ピン設定
 #define SS_PIN 10
 #define RST_PIN 9
-#define LCD_RS 4
-#define LCD_E 5
-#define LCD_D4 6
-#define LCD_D5 7
-#define LCD_D6 8
-#define LCD_D7 A0
-#define BARCODE_RX 2
-#define BARCODE_TX 3
-#define BARCODE_BAUD 115200
-#define SERIAL_BAUD 9600
 
-// 通信インスタンス
-LiquidCrystal lcd(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
+// RS, E, D4, D5, D6, D7
+LiquidCrystal lcd(4, 5, 6, 7, 8, A0);
+
 MFRC522 rfid(SS_PIN, RST_PIN);
-SoftwareSerial extSerial(BARCODE_RX, BARCODE_TX);
+String datarfid = ""; // RFID UID を保存する変数
 
-// データ変数
-String data2d = "";     // バーコードデータ
-String datarfid = "";   // RFID UIDデータ
+// バーコードリーダー
+SoftwareSerial extSerial(2, 3); // RX, TX
+String data2d = "";
 
 // 関数プロトタイプ
-void initSystems();
-void readBarcode();
-void readRFID();
-void updateLCD();
+void read2d();
+void readrfid();
+void displaylcd();
 
 void setup()
 {
-    initSystems();
+    Serial.begin(9600);
+    SPI.begin();
+    rfid.PCD_Init();
+    Serial.println("Place your RFID card");
+
+    lcd.begin(16, 2); // 16x2 LCD
+    lcd.print("Hello World!");
+
+    extSerial.begin(115200);
 }
 
 void loop()
 {
+    read2d();
+    readrfid();
+    displaylcd();
+}
 
+// バーコード読み込み関数
+void read2d()
+{
     if (extSerial.available())
     {
         // バーコードデータを読み込み
@@ -47,6 +51,11 @@ void loop()
         data2d = msg; // data2d変数に保存
         Serial.println("Barcode: " + data2d);
     }
+}
+
+// RFID読み込み関数
+void readrfid()
+{
     // 新しいカードがあるか
     if (!rfid.PICC_IsNewCardPresent())
     {
@@ -77,13 +86,16 @@ void loop()
     Serial.println();
     Serial.println("Saved UID: " + datarfid);
 
-    // LCD表示
+    // 通信終了
+    rfid.PICC_HaltA();
+    rfid.PCD_StopCrypto1();
+}
+
+// LCD表示関数
+void displaylcd()
+{
     lcd.setCursor(0, 0);
     lcd.print(data2d);
     lcd.setCursor(0, 1);
     lcd.print(datarfid);
-
-    // 通信終了
-    rfid.PICC_HaltA();
-    rfid.PCD_StopCrypto1();
 }
