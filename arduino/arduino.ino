@@ -15,11 +15,13 @@ String datarfid = ""; // RFID UID を保存する変数
 // バーコードリーダー
 SoftwareSerial extSerial(2, 3); // RX, TX
 String data2d = "";
+String receivedFromPC = ""; // PCから受信したデータ
 
 // 関数プロトタイプ
 void read2d();
 void readrfid();
 void displaylcd();
+void receiveFromPC();
 
 void setup()
 {
@@ -39,6 +41,9 @@ void loop()
     read2d();
     readrfid();
     displaylcd();
+
+    Serial.println("fromArduino");
+    receiveFromPC();
 }
 
 // バーコード読み込み関数
@@ -94,8 +99,38 @@ void readrfid()
 // LCD表示関数
 void displaylcd()
 {
-    lcd.setCursor(0, 0);
-    lcd.print(data2d);
-    lcd.setCursor(0, 1);
-    lcd.print(datarfid);
+    // LCDをクリア（ちらつき防止のため条件付き）
+    static unsigned long lastClear = 0;
+    if (millis() - lastClear > 500)
+    {
+        lcd.clear();
+        lastClear = millis();
+    }
+
+    // PC から受信したデータを表示
+    if (receivedFromPC != "")
+    {
+        lcd.setCursor(0, 0);
+        lcd.print("PC: ");
+        lcd.setCursor(4, 0);
+        lcd.print(receivedFromPC);
+    }
+    else
+    {
+        // 受信がない場合はバーコードと RFID を表示
+        lcd.setCursor(0, 0);
+        lcd.print(data2d);
+        lcd.setCursor(0, 1);
+        lcd.print(datarfid);
+    }
+}
+
+// PC（Processing）からの受信関数
+void receiveFromPC()
+{
+    if (Serial.available())
+    {
+        receivedFromPC = Serial.readStringUntil('\n');
+        Serial.println("Received from PC: " + receivedFromPC);
+    }
 }
