@@ -18,6 +18,7 @@ String data2d = "";
 String receivedFromPC = ""; // PCから受信したデータ
 String previousPrice = "";  // 前回受信した料金
 int totalPrice = 0;         // 料金の累計
+int currentPrice = 0;       // 現在の料金
 
 // 関数プロトタイプ
 void read2d();
@@ -113,9 +114,14 @@ void displaylcd()
     if (receivedFromPC != "")
     {
         lcd.setCursor(0, 0);
-        lcd.print("price: ");
-        lcd.setCursor(6, 0);
-        lcd.print(receivedFromPC);
+        lcd.print("P:");
+        lcd.setCursor(2, 0);
+        lcd.print(currentPrice);
+
+        lcd.setCursor(0, 1);
+        lcd.print("T:");
+        lcd.setCursor(2, 1);
+        lcd.print(totalPrice);
     }
     else
     {
@@ -135,19 +141,35 @@ void receiveFromPC()
         receivedFromPC = Serial.readStringUntil('\n');
         Serial.println("Received from PC: " + receivedFromPC);
 
-        // 料金が前回と異なる場合に加算
-        if (receivedFromPC != previousPrice && receivedFromPC != "")
+        // 「現在の料金,合計料金」の形式でパース
+        int commaIndex = receivedFromPC.indexOf(',');
+        if (commaIndex > 0)
         {
-            // 文字列を整数に変換して加算
-            int currentPrice = receivedFromPC.toInt();
-            totalPrice += currentPrice;
+            String currentPriceStr = receivedFromPC.substring(0, commaIndex);
+            String totalPriceStr = receivedFromPC.substring(commaIndex + 1);
 
-            previousPrice = receivedFromPC;
+            currentPrice = currentPriceStr.toInt();
+            totalPrice = totalPriceStr.toInt();
 
             Serial.print("Current Price: ");
             Serial.print(currentPrice);
             Serial.print(", Total Price: ");
             Serial.println(totalPrice);
+        }
+        else
+        {
+            // カンマがない場合は従来通り処理
+            if (receivedFromPC != previousPrice && receivedFromPC != "")
+            {
+                currentPrice = receivedFromPC.toInt();
+                totalPrice += currentPrice;
+                previousPrice = receivedFromPC;
+
+                Serial.print("Current Price: ");
+                Serial.print(currentPrice);
+                Serial.print(", Total Price: ");
+                Serial.println(totalPrice);
+            }
         }
     }
 }
