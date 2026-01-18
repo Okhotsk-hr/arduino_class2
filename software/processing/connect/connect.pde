@@ -8,6 +8,7 @@ String foundPrice = ""; // 検索結果のプライス
 String current2d = ""; // 現在のバーコードID
 String previous2d = ""; // 1つ前のバーコードID
 int receivemode = 0;
+int totalPrice = 0; // 合計料金
 
 void setup() {
     size(400, 200);
@@ -119,14 +120,18 @@ void searchAndSendPrice(String id) {
             String price = row.getString("price");
             foundPrice = price;
             
+            int currentPrice = Integer.parseInt(price);
+            totalPrice += currentPrice;
+            
             // コンソール出力
             println("=== 検索成功！ ===");
             println("バーコードID: " + id);
-            println("料金: " + price);
+            println("現在の料金: " + currentPrice);
+            println("合計料金: " + totalPrice);
             println("==================");
             
-            // Arduinoにpriceを送信
-            arduino.write(price + "\n");
+            // Arduinoに「現在の料金,合計料金」を送信
+            arduino.write(currentPrice + "," + totalPrice + "\n");
             return;
         }
     }
