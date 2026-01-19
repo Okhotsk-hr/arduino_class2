@@ -31,9 +31,43 @@ MISO         12<br>
 SCK          13<br>
 
 - LCD<br>
-
+RS  4<br>
+E   5<br>
+D4  6<br>
+D5  7<br>
+D6  8<br>
+D7  A0<br>
 
 - フルカラーLED（PL9823-F8）<br>
+A1
+
+-  タクトスイッチ<br>
+A2
+
+**Arduino**<br>
+0<br>
+1<br>
+2  バーコードリーダー<br>
+3  バーコードリーダー<br>
+4  LCD<br>
+5  LCD<br>
+6  LCD<br>
+7  LCD<br>
+8  LCD<br>
+9  RFID<br>
+10  RFID<br>
+11  RFID<br>
+12  RFID<br>
+13<br>
+A0  LCD<br>
+A1  LED<br>
+A2  タクトスイッチ<br>
+A3<br>
+A4<br>
+A5<br>
+
+
+
 
 ## 断念
 バーコード/QRコードを読み取り、読み取り結果をidとして使用<br>
