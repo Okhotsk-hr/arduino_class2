@@ -19,6 +19,7 @@ String receivedFromPC = ""; // PCから受信したデータ
 String previousPrice = "";  // 前回受信した料金
 int totalPrice = 0;         // 料金の累計
 int currentPrice = 0;       // 現在の料金
+int cardBalance = 0;        // カード残高（mode2表示用）
 
 // A2端子のタクトスイッチ
 #define SWITCH_PIN A2
@@ -163,6 +164,11 @@ void displaylcd()
             lcd.print("T:");
             lcd.setCursor(2, 0);
             lcd.print(totalPrice);
+
+            lcd.setCursor(0, 1);
+            lcd.print("B:");
+            lcd.setCursor(2, 1);
+            lcd.print(cardBalance);
             break;
         }
     }
@@ -192,6 +198,22 @@ void detectTactSwitch()
     if (prevSwitchState == LOW && currentSwitchState == HIGH)
     {
         mode++; // modeを1つ進める
+
+        // mode4になったら0に戻す
+        if (mode == 4)
+        {
+            mode = 0;
+        }
+
+        // mode0になったときに料金関連をリセット
+        if (mode == 0)
+        {
+            currentPrice = 0;
+            totalPrice = 0;
+            cardBalance = 0;
+            Serial.println("Reset: currentPrice, totalPrice, cardBalance");
+        }
+
         lastSwitchTime = millis();
 
         Serial.print("Switch detected! Mode changed to: ");
@@ -213,16 +235,21 @@ void receiveFromPC()
         int commaIndex = receivedFromPC.indexOf(',');
         if (commaIndex > 0)
         {
-            String currentPriceStr = receivedFromPC.substring(0, commaIndex);
-            String totalPriceStr = receivedFromPC.substring(commaIndex + 1);
+            String firstStr = receivedFromPC.substring(0, commaIndex);
+            String secondStr = receivedFromPC.substring(commaIndex + 1);
 
-            currentPrice = currentPriceStr.toInt();
-            totalPrice = totalPriceStr.toInt();
-
-            // Serial.print("Current Price: ");
-            // Serial.print(currentPrice);
-            // Serial.print(", Total Price: ");
-            // Serial.println(totalPrice);
+            // mode2: 「総額,カード残高」を受信して表示
+            if (mode == 2)
+            {
+                totalPrice = firstStr.toInt();
+                cardBalance = secondStr.toInt();
+            }
+            else
+            {
+                // mode1等: 「現在の料金,合計料金」
+                currentPrice = firstStr.toInt();
+                totalPrice = secondStr.toInt();
+            }
         }
         else
         {

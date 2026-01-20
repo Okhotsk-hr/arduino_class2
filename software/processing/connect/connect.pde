@@ -153,9 +153,18 @@ void searchAndSendPrice(String id) {
                 println("差引後残高: " + remaining);
                 println("================");
                 
+                // CSV上の残高を更新して保存
+                row.setString(valueColumn, str(remaining));
+                saveTable(cardTable, "card.csv");
+                println("card.csv updated: " + id + " -> " + remaining);
+                
                 // Arduinoに「合計料金,差引後残高」を送信
                 arduino.write(totalPrice + "," + remaining + "\n");
                 foundPrice = str(remaining);
+                
+                // 決済完了後、総額をリセット
+                totalPrice = 0;
+                println("総額をリセット: " + totalPrice);
             } else {
                 int currentPrice = Integer.parseInt(value);
                 totalPrice += currentPrice;
