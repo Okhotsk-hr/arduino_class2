@@ -4,6 +4,7 @@ Serial arduino;
 String received = "";
 PFont japaneseFont;
 Table priceTable; // price.csvを保存するテーブル
+Table cardTable;  // card.csvを保存するテーブル
 String foundPrice = ""; // 検索結果のプライス
 String current2d = ""; // 現在のバーコードID
 String previous2d = ""; // 1つ前のバーコードID
@@ -32,6 +33,23 @@ void setup() {
         println("===============");
     } else {
         println("ERROR: Could not load price.csv");
+    }
+    
+    // card.csvを読み込み（RFID UID 用）
+    cardTable = loadTable("card.csv", "header");
+    if (cardTable != null) {
+        println("card.csv loaded successfully. Rows: " + cardTable.getRowCount());
+        
+        // CSV内容をデバッグ出力
+        println("=== card.csv 内容 ===");
+        for (TableRow row : cardTable.rows()) {
+            String id = row.getString("id");
+            String balance = row.getString("balance");
+            println("ID: [" + id + "], Balance: [" + balance + "]");
+        }
+        println("====================");
+    } else {
+        println("ERROR: Could not load card.csv");
     }
     
     //利用可能なシリアルポート表示
@@ -90,11 +108,6 @@ void serialEvent(Serial p) {
 
 // CSVからIDで検索してpriceをArduinoに送信
 void searchAndSendPrice(String id) {
-    if (priceTable == null) {
-        println("ERROR: price.csv not loaded");
-        return;
-    }
-    
     // 1つ前のバーコードIDを記録
     previous2d = current2d;
     current2d = id;
@@ -102,40 +115,89 @@ void searchAndSendPrice(String id) {
     // 余分な空白や改行を削除
     id = id.trim();
     
+    boolean isRfid = isRfidUid(id);
+    Table targetTable = isRfid ? cardTable : priceTable;
+    String valueColumn = isRfid ? "balance" : "price";
+    if (targetTable == null) {
+        println("ERROR: " + (isRfid ? "card.csv" : "price.csv") + " not loaded");
+        return;
+    }
+    
     println("=== 検索開始 ===");
     println("検索ID: [" + id + "]");
     println("ID長: " + id.length());
-    println("CSV行数: " + priceTable.getRowCount());
+    println("検索対象CSV: " + (isRfid ? "card.csv" : "price.csv"));
+    println("CSV行数: " + targetTable.getRowCount());
     
     foundPrice = "Not Found";
     
     // CSVの全行を検索
-    for (TableRow row : priceTable.rows()) {
+    for (TableRow row : targetTable.rows()) {
         String csvId = row.getString("id");
         csvId = csvId.trim(); // CSVのIDも trim
         
         println("比較: CSV[" + csvId + "] == 受信[" + id + "] -> " + csvId.equals(id));
         
         if (csvId.equals(id)) {
-            String price = row.getString("price");
-            foundPrice = price;
+            String value = row.getString(valueColumn);
+            foundPrice = value;
             
-            int currentPrice = Integer.parseInt(price);
-            totalPrice += currentPrice;
-            
-            // コンソール出力
-            println("=== 検索成功！ ===");
-            println("バーコードID: " + id);
-            println("現在の料金: " + currentPrice);
-            println("合計料金: " + totalPrice);
-            println("==================");
-            
-            // Arduinoに「現在の料金,合計料金」を送信
-            arduino.write(currentPrice + "," + totalPrice + "\n");
+            if (isRfid) {
+                // RFIDは残高から合計を引いて送信
+                int balance = parseIntSafe(value);
+                int remaining = balance - totalPrice;
+                println("=== RFID 決済 ===");
+                println("UID: " + id);
+                println("残高: " + balance);
+                println("合計料金: " + totalPrice);
+                println("差引後残高: " + remaining);
+                println("================");
+                
+                // CSV上の残高を更新して保存
+                row.setString(valueColumn, str(remaining));
+                saveTable(cardTable, "card.csv");
+                println("card.csv updated: " + id + " -> " + remaining);
+                
+                // Arduinoに「合計料金,差引後残高」を送信
+                arduino.write(totalPrice + "," + remaining + "\n");
+                foundPrice = str(remaining);
+                
+                // 決済完了後、総額をリセット
+                totalPrice = 0;
+                println("総額をリセット: " + totalPrice);
+            } else {
+                int currentPrice = Integer.parseInt(value);
+                totalPrice += currentPrice;
+                
+                // コンソール出力
+                println("=== 検索成功！ ===");
+                println("バーコードID: " + id);
+                println("現在の料金: " + currentPrice);
+                println("合計料金: " + totalPrice);
+                println("==================");
+                
+                // Arduinoに「現在の料金,合計料金」を送信
+                arduino.write(currentPrice + "," + totalPrice + "\n");
+            }
             return;
         }
     }
     
     println("=== 検索失敗 ===");
     println("ID not found in CSV: [" + id + "]");
+}
+
+// RFIDのUIDかどうかを判定（例: "64 1b 9c 04"）
+boolean isRfidUid(String id) {
+    String trimmed = id.trim();
+    return trimmed.matches("(?i)^[0-9a-f]{2}( [0-9a-f]{2}){3}$");
+}
+
+// 数値変換の安全版（空文字やnullを0にする）
+int parseIntSafe(String value) {
+    try {
+        return Integer.parseInt(value.trim());
+    } catch(Exception e) {
+        return 0;
+    }
 }

@@ -19,6 +19,14 @@ String receivedFromPC = ""; // PCから受信したデータ
 String previousPrice = "";  // 前回受信した料金
 int totalPrice = 0;         // 料金の累計
 int currentPrice = 0;       // 現在の料金
+int cardBalance = 0;        // カード残高（mode2表示用）
+
+// A2端子のタクトスイッチ
+#define SWITCH_PIN A2
+int mode = 0;                     // モード変数
+bool prevSwitchState = false;     // 前フレームのスイッチ状態
+const int DEBOUNCE_DELAY = 50;    // デバウンス時間（ミリ秒）
+unsigned long lastSwitchTime = 0; // 最後にスイッチが押された時刻
 
 // 関数プロトタイプ
 void read2d();
@@ -37,13 +45,37 @@ void setup()
     lcd.print("Hello World!");
 
     extSerial.begin(115200);
+
+    // A2端子をタクトスイッチの入力として設定
+    pinMode(SWITCH_PIN, INPUT_PULLUP);
+    prevSwitchState = false;
 }
 
 void loop()
 {
-    read2d();
-    readrfid();
+    switch (mode)
+    {
+    case 0:
+        // 初期モード
+        lcd.setCursor(10, 0);
+        lcd.print("mode0");
+        break;
+    case 1:
+        // 商品読み取りモード
+        read2d();
+        lcd.setCursor(10, 0);
+        lcd.print("mode1");
+        break;
+    case 2:
+        // 支払いモード
+        readrfid();
+        lcd.setCursor(10, 0);
+        lcd.print("mode2");
+
+        break;
+    }
     displaylcd();
+    detectTactSwitch(); // A2端子のスイッチを検知
 
     // Serial.println("fromArduino");
     receiveFromPC();
@@ -58,6 +90,7 @@ void read2d()
         String msg = extSerial.readStringUntil('\n');
         data2d = msg; // data2d変数に保存
         Serial.println(data2d);
+        lcd.clear();
     }
 }
 
@@ -113,15 +146,31 @@ void displaylcd()
     // PC から受信したデータを表示
     if (receivedFromPC != "")
     {
-        lcd.setCursor(0, 0);
-        lcd.print("P:");
-        lcd.setCursor(2, 0);
-        lcd.print(currentPrice);
+        switch (mode)
+        {
+        case 1:
+            lcd.setCursor(0, 0);
+            lcd.print("P:");
+            lcd.setCursor(2, 0);
+            lcd.print(currentPrice);
 
-        lcd.setCursor(0, 1);
-        lcd.print("T:");
-        lcd.setCursor(2, 1);
-        lcd.print(totalPrice);
+            lcd.setCursor(0, 1);
+            lcd.print("T:");
+            lcd.setCursor(2, 1);
+            lcd.print(totalPrice);
+            break;
+        case 2:
+            lcd.setCursor(0, 0);
+            lcd.print("T:");
+            lcd.setCursor(2, 0);
+            lcd.print(totalPrice);
+
+            lcd.setCursor(0, 1);
+            lcd.print("B:");
+            lcd.setCursor(2, 1);
+            lcd.print(cardBalance);
+            break;
+        }
     }
     else
     {
@@ -131,6 +180,47 @@ void displaylcd()
         lcd.setCursor(0, 1);
         lcd.print(datarfid);
     }
+}
+
+// A2端子のタクトスイッチを検知する関数
+void detectTactSwitch()
+{
+    // A2端子の現在の状態を読み込み（LOW = 押された、HIGH = 押されていない）
+    bool currentSwitchState = digitalRead(SWITCH_PIN);
+
+    // デバウンス処理
+    if (millis() - lastSwitchTime < DEBOUNCE_DELAY)
+    {
+        return;
+    }
+
+    // スイッチが離された瞬間を検出（前回LOW→現在HIGH）
+    if (prevSwitchState == LOW && currentSwitchState == HIGH)
+    {
+        mode++; // modeを1つ進める
+
+        // mode4になったら0に戻す
+        if (mode == 4)
+        {
+            mode = 0;
+        }
+
+        // mode0になったときに料金関連をリセット
+        if (mode == 0)
+        {
+            currentPrice = 0;
+            totalPrice = 0;
+            cardBalance = 0;
+            Serial.println("Reset: currentPrice, totalPrice, cardBalance");
+        }
+
+        lastSwitchTime = millis();
+
+        Serial.print("Switch detected! Mode changed to: ");
+        Serial.println(mode);
+    }
+
+    prevSwitchState = currentSwitchState;
 }
 
 // PC（Processing）からの受信関数
@@ -145,16 +235,21 @@ void receiveFromPC()
         int commaIndex = receivedFromPC.indexOf(',');
         if (commaIndex > 0)
         {
-            String currentPriceStr = receivedFromPC.substring(0, commaIndex);
-            String totalPriceStr = receivedFromPC.substring(commaIndex + 1);
+            String firstStr = receivedFromPC.substring(0, commaIndex);
+            String secondStr = receivedFromPC.substring(commaIndex + 1);
 
-            currentPrice = currentPriceStr.toInt();
-            totalPrice = totalPriceStr.toInt();
-
-            Serial.print("Current Price: ");
-            Serial.print(currentPrice);
-            Serial.print(", Total Price: ");
-            Serial.println(totalPrice);
+            // mode2: 「総額,カード残高」を受信して表示
+            if (mode == 2)
+            {
+                totalPrice = firstStr.toInt();
+                cardBalance = secondStr.toInt();
+            }
+            else
+            {
+                // mode1等: 「現在の料金,合計料金」
+                currentPrice = firstStr.toInt();
+                totalPrice = secondStr.toInt();
+            }
         }
         else
         {
